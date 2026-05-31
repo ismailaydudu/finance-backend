@@ -12,6 +12,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Map;
 
@@ -40,7 +42,9 @@ public class TestController {
         t1.setTutar(95.0);
         t1.setIslemTipi("GIDER");
         t1.setKategori("Gıda");
-        t1.setTarih(LocalDate.now());
+        
+        // DÜZELTME: Artık LocalDate değil, LocalDateTime kullanıyoruz (Saat bilgisi eklendi)
+        t1.setTarih(LocalDateTime.now());
 
         transactionRepository.save(t1);
         return "95 TL'lik kahve harcaması veritabanına başarıyla kaydedildi!";
@@ -64,7 +68,27 @@ public class TestController {
         yeniKayit.setTutar(Double.valueOf(islem.get("tutar").toString()));
         yeniKayit.setKategori(islem.get("kategori").toString());
         yeniKayit.setIslemTipi(islem.get("islemTipi").toString());
-        yeniKayit.setTarih(LocalDate.now());
+        
+        // EFSANEVİ SAAT/TARİH YAKALAMA MOTORU
+        if (islem.containsKey("tarih") && islem.get("tarih") != null) {
+            String tarihStr = islem.get("tarih").toString();
+            try {
+                // Eğer Flutter'dan içinde "T" harfi olan tam bir tarih-saat gelirse
+                if (tarihStr.contains("T")) {
+                    yeniKayit.setTarih(LocalDateTime.parse(tarihStr));
+                } 
+                // Eğer sadece "2026-05-31" gibi gün gelirse, o günün şu anki saatini ekle
+                else {
+                    LocalDate sadeceGun = LocalDate.parse(tarihStr);
+                    yeniKayit.setTarih(LocalDateTime.of(sadeceGun, LocalTime.now()));
+                }
+            } catch (Exception e) {
+                // Parse hatası olursa sistem çökmesin, şu anki zamanı bassın
+                yeniKayit.setTarih(LocalDateTime.now());
+            }
+        } else {
+            yeniKayit.setTarih(LocalDateTime.now()); 
+        }
 
         // Veritabanına kaydet
         transactionRepository.save(yeniKayit);
