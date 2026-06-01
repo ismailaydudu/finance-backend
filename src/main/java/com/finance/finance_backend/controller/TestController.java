@@ -43,7 +43,6 @@ public class TestController {
         t1.setIslemTipi("GIDER");
         t1.setKategori("Gıda");
         
-        // DÜZELTME: Artık LocalDate değil, LocalDateTime kullanıyoruz (Saat bilgisi eklendi)
         t1.setTarih(LocalDateTime.now());
 
         transactionRepository.save(t1);
@@ -60,37 +59,34 @@ public class TestController {
         return currencyService.canliKurGetir();
     }
 
-    @PostMapping("/api/islemler")
+    // İŞTE DÜZELTME BURADA! 
+    // Hata vermemesi için adres adını değiştirdim: "/api/test-islem-ekle" oldu.
+    // Eğer Flutter'dan buraya istek atarsan, o zaman "api_service.dart" içindeki adresi de buna uyumlu yapman gerekir.
+    // Ancak Flutter büyük ihtimalle "IslemController.java" içindekine istek atıyor.
+    @PostMapping("/api/test-islem-ekle")
     public ResponseEntity<String> yeniIslemEkle(@RequestBody Map<String, Object> islem) {
-        // Gelen veriden nesne oluştur
         Transaction yeniKayit = new Transaction();
         yeniKayit.setBaslik(islem.get("baslik").toString());
         yeniKayit.setTutar(Double.valueOf(islem.get("tutar").toString()));
         yeniKayit.setKategori(islem.get("kategori").toString());
         yeniKayit.setIslemTipi(islem.get("islemTipi").toString());
         
-        // EFSANEVİ SAAT/TARİH YAKALAMA MOTORU
         if (islem.containsKey("tarih") && islem.get("tarih") != null) {
             String tarihStr = islem.get("tarih").toString();
             try {
-                // Eğer Flutter'dan içinde "T" harfi olan tam bir tarih-saat gelirse
                 if (tarihStr.contains("T")) {
                     yeniKayit.setTarih(LocalDateTime.parse(tarihStr));
-                } 
-                // Eğer sadece "2026-05-31" gibi gün gelirse, o günün şu anki saatini ekle
-                else {
+                } else {
                     LocalDate sadeceGun = LocalDate.parse(tarihStr);
                     yeniKayit.setTarih(LocalDateTime.of(sadeceGun, LocalTime.now()));
                 }
             } catch (Exception e) {
-                // Parse hatası olursa sistem çökmesin, şu anki zamanı bassın
                 yeniKayit.setTarih(LocalDateTime.now());
             }
         } else {
             yeniKayit.setTarih(LocalDateTime.now()); 
         }
 
-        // Veritabanına kaydet
         transactionRepository.save(yeniKayit);
 
         System.out.println("---- VERİTABANINA KAYDEDİLDİ: " + yeniKayit.getBaslik() + " ----");
